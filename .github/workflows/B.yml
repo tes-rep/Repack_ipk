@@ -95,7 +95,7 @@ jobs:
         git config --global user.name "github-actions"
         git config --global user.email "github-actions@users.noreply.github.com"
         git clone --depth=1 --branch built-drivers https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} temp-branch
-        cp -r output/* temp-branch/
+        cp -r output/* temp-branch/5.4/
         cd temp-branch
         git add .
         git commit -m "Add built drivers $(date +'%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
