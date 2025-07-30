@@ -17,6 +17,11 @@ on:
         default: |
           https://github.com/kamu/rtl8189fs.git@main
           https://github.com/kamu/rtl8821cu.git@master
+      Lokasi:
+        description: 'Daftar Driver (format: url@branch), pisah baris'
+        required: true
+        default: 5.4/config
+        
 permissions:
   contents: write
 jobs:
@@ -36,7 +41,7 @@ jobs:
       run: |
         git clone --depth=1 --branch "${{ github.event.inputs.kernel_branch }}" \
           "${{ github.event.inputs.kernel_repo }}" kernel
-        cp .config kernel/.config || true
+        cp "${{ github.event.inputs.Lokasi }}" kernel/.config || true
 
     - name: Cek Module.symvers (jika ada di repo)
       id: check_symvers
