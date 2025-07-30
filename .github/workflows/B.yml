@@ -17,7 +17,8 @@ on:
         default: |
           https://github.com/kamu/rtl8189fs.git@main
           https://github.com/kamu/rtl8821cu.git@master
-
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
