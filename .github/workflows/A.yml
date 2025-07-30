@@ -45,9 +45,9 @@ jobs:
 
       - name: Inject Module.symvers if exists
         run: |
-          if [ -f .module-symvers/Module.symvers ]; then
+          if [ -f Module.symvers ]; then
             echo "✅ Found .module-symvers/Module.symvers, copying..."
-            cp .module-symvers/Module.symvers kernel/Module.symvers
+            cp Module.symvers kernel/Module.symvers
           elif [ -f unisoc-driver/Module.symvers ]; then
             echo "✅ Found unisoc-driver/Module.symvers, copying..."
             cp unisoc-driver/Module.symvers kernel/Module.symvers
