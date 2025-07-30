@@ -1,14 +1,22 @@
-name: Build 8189fs Driver and Upload to Release
+name: Build 8189fs Driver from External Repo (ARM64)2
 
 on:
   workflow_dispatch:
     inputs:
       kernel_repo:
-        description: 'URL Repo Kernel'
+        description: 'URL Repo Kernel (e.g. https://github.com/kamu/openwrt-kernel)'
         required: true
         default: 'https://github.com/kamu/openwrt-kernel.git'
       kernel_branch:
-        description: 'Branch Kernel'
+        description: 'Branch Kernel (e.g. main)'
+        required: true
+        default: 'main'
+      driver_repo:
+        description: 'URL Repo Driver (e.g. https://github.com/kamu/rtl8189fs)'
+        required: true
+        default: 'https://github.com/kamu/rtl8189fs.git'
+      driver_branch:
+        description: 'Branch Driver (e.g. main)'
         required: true
         default: 'main'
 
@@ -17,34 +25,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Driver Source
+      - name: Checkout Repo Ini (untuk .config)
         uses: actions/checkout@v4
 
-      - name: Setup Toolchain
+      - name: Install Toolchain & Build Tools
         run: |
           sudo apt update
-          sudo apt install -y gcc-aarch64-linux-gnu make bc bison flex
+          sudo apt install -y gcc-aarch64-linux-gnu make bc bison flex libssl-dev
 
       - name: Clone Kernel Source
         run: |
-          git clone --depth=1 --branch ${{ github.event.inputs.kernel_branch }} \
-            ${{ github.event.inputs.kernel_repo }} kernel
+          git clone --depth=1 --branch "${{ github.event.inputs.kernel_branch }}" \
+            "${{ github.event.inputs.kernel_repo }}" kernel
 
-      - name: Apply Kernel Config
+      - name: Clone Driver Source (8189fs)
+        run: |
+          git clone --depth=1 --branch "${{ github.event.inputs.driver_branch }}" \
+            "${{ github.event.inputs.driver_repo }}" 8189fs
+
+      - name: Copy Kernel .config
         run: |
           cp .config kernel/.config
+
+      - name: Prepare Kernel Headers & Module Symbols
+        run: |
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- prepare
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules
 
-      - name: Build Driver 8189fs
+      - name: Build 8189fs Driver
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          export CONFIG_RTL8188F=y
-          export CONFIG_SDIO_HCI=y
+          export EXTRA_CFLAGS="-Wno-error"
           make -C kernel M=$PWD/8189fs modules
 
-      - name: Rename & Prepare Output
+      - name: Rename Output
         run: |
           mkdir -p output
           cp 8189fs/*.ko output/8189fs-openwrt-arm64.ko
@@ -55,3 +73,9 @@ jobs:
           files: output/8189fs-openwrt-arm64.ko
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload as Artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: 8189fs-ko
+          path: output/8189fs-openwrt-arm64.ko
