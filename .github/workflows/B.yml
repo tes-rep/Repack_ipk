@@ -80,12 +80,14 @@ jobs:
     - name: Upload ke GitHub Release
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: "driver-build-${{ github.run_number }}"
         files: |
           output/*.ko
           output/Module.symvers
           output/all-drivers-arm64.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
     - name: Commit ke Branch `built-drivers`
       run: |
