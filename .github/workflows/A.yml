@@ -1,0 +1,101 @@
+name: Build Unisoc WiFi Driver (UWE5621)
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_repo:
+        description: 'URL Repo Kernel (e.g. https://github.com/kamu/openwrt-kernel)'
+        required: true
+        default: 'https://github.com/kamu/openwrt-kernel.git'
+      kernel_branch:
+        description: 'Branch Kernel (e.g. main)'
+        required: true
+        default: 'main'
+      driver_repo:
+        description: 'URL Repo Driver Unisoc (e.g. https://github.com/kamu/unisoc-driver)'
+        required: true
+        default: 'https://github.com/kamu/unisoc-driver.git'
+      driver_branch:
+        description: 'Branch Driver (e.g. main)'
+        required: true
+        default: 'main'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout This Repo (for .config & optional Module.symvers)
+        uses: actions/checkout@v4
+
+      - name: Install Toolchain & Build Tools
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu make bc bison flex
+
+      - name: Clone Kernel Source
+        run: |
+          git clone --depth=1 --branch "${{ github.event.inputs.kernel_branch }}" \
+            "${{ github.event.inputs.kernel_repo }}" kernel
+
+      - name: Clone Driver Source (Unisoc)
+        run: |
+          git clone --depth=1 --branch "${{ github.event.inputs.driver_branch }}" \
+            "${{ github.event.inputs.driver_repo }}" unisoc-driver
+
+      - name: Inject Module.symvers if exists
+        run: |
+          if [ -f .module-symvers/Module.symvers ]; then
+            echo "✅ Found .module-symvers/Module.symvers, copying..."
+            cp .module-symvers/Module.symvers kernel/Module.symvers
+          elif [ -f unisoc-driver/Module.symvers ]; then
+            echo "✅ Found unisoc-driver/Module.symvers, copying..."
+            cp unisoc-driver/Module.symvers kernel/Module.symvers
+          else
+            echo "⚠️ No Module.symvers found, continuing without it"
+          fi
+
+      - name: Prepare Kernel Build (headers only)
+        run: |
+          cp .config kernel/.config
+          cd kernel
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- prepare
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+
+      - name: Build Unisoc WiFi Driver (UWE5621)
+        run: |
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export CFG_AML_WIFI_DEVICE_UWE5621=y
+          make -C kernel M=$PWD/unisoc-driver/BSP modules
+          make -C kernel M=$PWD/unisoc-driver/WIFI modules
+
+      - name: Rename Output
+        run: |
+          mkdir -p output
+          cp unisoc-driver/BSP/uwe5621_bsp_sdio.ko output/
+          cp unisoc-driver/WIFI/sprdwl_ng.ko output/
+
+      - name: Upload ke GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+         tag_name: "driver-bui ld-${{ github.run_number }}"
+         files: |
+          output/*.ko
+          output/Module.symvers
+          output/all-drivers-arm64.tar.gz
+          env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Commit ke Branch `built-drivers`
+        run: |
+         git config --global user.name "github-actions"
+         git config --global user.email "github-actions@users.noreply.github.com"
+         git clone --depth=1 --branch built-drivers https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} temp-branch
+         cp -r output/* temp-branch/
+         cd temp-branch
+         git add .
+         git commit -m "Add built drivers $(date +'%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
+         git push origin built-drivers
