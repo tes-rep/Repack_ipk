@@ -77,7 +77,7 @@ jobs:
           git clone --depth=1 --branch "$branch" "$repo_url" "$name"
           echo ">> Building $name"
           ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- EXTRA_CFLAGS="-Wno-error" \
-            make -C kernel M=$PWD/$name modules
+            make -C kernel M=$PWD/$name SRC_PATH=$PWD/$name modules
           cp $name/*.ko output/${name}-arm64.ko || true
         done
         cp kernel/Module.symvers output/ || true
