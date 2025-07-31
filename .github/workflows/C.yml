@@ -72,16 +72,18 @@ jobs:
         export CROSS_COMPILE=aarch64-linux-gnu-
         mkdir -p output
 
-          make -C kernel M=$PWD/uwe5621ds-aml \
-            ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE \
-            CONFIG_AML_WIFI_DEVICE_UWE5621=y \
-            CONFIG_WLAN_UWE5622=y \
-            CONFIG_TTY_OVERY_SDIO=y \
-            modules
+        for sub in unisocwcn unisocwifi tty-sdio; do
+        make -C kernel M=$PWD/uwe5621ds-aml/$sub \
+        ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+        CONFIG_AML_WIFI_DEVICE_UWE5621=y \
+        CONFIG_WLAN_UWE5622=y \
+        CONFIG_TTY_OVERY_SDIO=y \
+        modules
+        done
 
-          find uwe5621ds-aml/ -name "*.ko" -exec cp {} output/ \;
-          cp kernel/Module.symvers output/ || true
-          tar -czvf output/all-drivers-arm64.tar.gz -C output .
+        find uwe5621ds-aml/ -name "*.ko" -exec cp {} output/ \;
+        cp kernel/Module.symvers output/ || true
+        tar -czvf output/all-drivers-arm64.tar.gz -C output .
 
     - name: Upload ke GitHub Release
       uses: softprops/action-gh-release@v2
