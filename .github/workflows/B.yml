@@ -36,12 +36,12 @@ jobs:
       run: |
         git clone --depth=1 --branch "${{ github.event.inputs.kernel_branch }}" \
           "${{ github.event.inputs.kernel_repo }}" kernel
-        cp .config kernel/.config || true
+        cp 5.4/.config kernel/.config || true
 
     - name: Cek Module.symvers (jika ada di repo)
       id: check_symvers
       run: |
-        if [ -f module_data/Module.symvers ]; then
+        if [ -f 5.4/Module.symvers ]; then
           echo "SYMVERS_FOUND=true" >> $GITHUB_ENV
           cp module_data/Module.symvers kernel/
         else
