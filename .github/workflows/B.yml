@@ -65,7 +65,7 @@ jobs:
       run: |
         cd kernel
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
-        make -C unisoc_uwe5621 modules
+        
     - name: Build Semua Driver
       run: |
         mkdir -p output
@@ -78,6 +78,7 @@ jobs:
           echo ">> Building $name"
           ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- EXTRA_CFLAGS="-Wno-error" \
             make -C kernel M=$PWD/$name modules
+            make -C unisoc_uwe5621 modules
           cp $name/*.ko output/${name}-arm64.ko || true
           cp unisoc_uwe5621/BSP/*.ko output/ || true
           cp unisoc_uwe5621/WIFI/*.ko output/ || true
