@@ -68,6 +68,8 @@ jobs:
         
     - name: Build Driver
       run: |
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
         mkdir -p output
 
           make -C kernel M=$PWD/uwe5621ds-aml \
