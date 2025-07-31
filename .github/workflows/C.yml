@@ -1,4 +1,4 @@
-name: Build Multi WiFi Drivers (ARM64) with Auto Kernel Fallback65
+name: Build Auto Kernel Fallback65
 
 on:
   workflow_dispatch:
@@ -68,7 +68,7 @@ jobs:
         
     - name: Build Driver
       run: |
-          mkdir -p output
+        mkdir -p output
 
           make -C kernel M=$PWD/uwe5621ds-aml \
             ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE \
