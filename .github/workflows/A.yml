@@ -45,7 +45,7 @@ jobs:
 
       - name: Inject Module.symvers if exists
         run: |
-          if [ -f Module.symvers ]; then
+          if [ -f 5.4/Module.symvers ]; then
             echo "✅ Found .module-symvers/Module.symvers, copying..."
             cp Module.symvers kernel/Module.symvers
           elif [ -f unisoc-driver/Module.symvers ]; then
@@ -57,7 +57,7 @@ jobs:
 
       - name: Prepare Kernel Build (headers only)
         run: |
-          cp .config kernel/.config
+          cp 5.4/config kernel/.config
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- prepare
