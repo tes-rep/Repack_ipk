@@ -46,9 +46,9 @@ jobs:
     - name: Cek Module.symvers (jika ada di repo)
       id: check_symvers
       run: |
-        if [ -f module_data/Module.symvers ]; then
+        if [ -f 5.4/Module.symvers ]; then
           echo "SYMVERS_FOUND=true" >> $GITHUB_ENV
-          cp module_data/Module.symvers kernel/
+          cp 5.4/Module.symvers kernel/
         else
           echo "SYMVERS_FOUND=false" >> $GITHUB_ENV
         fi
@@ -95,13 +95,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-    - name: Commit ke Branch `built-drivers`
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@users.noreply.github.com"
-        git clone --depth=1 --branch built-drivers https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} temp-branch
-        cp -r output/* temp-branch/
-        cd temp-branch
-        git add .
-        git commit -m "Add built drivers $(date +'%Y-%m-%d %H:%M:%S')" || echo "Nothing to commit"
-        git push origin built-drivers
+    
