@@ -1,0 +1,96 @@
+name: Build Auto Kernel Fallback65
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_repo:
+        description: 'URL Kernel Repo'
+        required: true
+        default: 'https://github.com/kamu/openwrt-kernel.git'
+      kernel_branch:
+        description: 'Branch Kernel'
+        required: true
+        default: 'main'
+      driver_urls:
+        description: 'Daftar Driver (format: url@branch), pisah baris'
+        required: true
+        default: |
+          https://github.com/kamu/rtl8189fs.git@main
+          https://github.com/kamu/rtl8821cu.git@master
+      Lokasi:
+        description: 'Daftar Driver (format: url@branch), pisah baris'
+        required: true
+        default: 5.4/config
+        
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo Ini
+      uses: actions/checkout@v4
+
+    - name: Install Toolchain
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-aarch64-linux-gnu make bc bison flex libssl-dev git
+
+    - name: Clone Kernel
+      run: |
+        git clone --depth=1 --branch "${{ github.event.inputs.kernel_branch }}" \
+          "${{ github.event.inputs.kernel_repo }}" kernel
+        cp "${{ github.event.inputs.Lokasi }}" kernel/.config || true
+
+    - name: Cek Module.symvers (jika ada di repo)
+      id: check_symvers
+      run: |
+        if [ -f 5.4/Module.symvers ]; then
+          echo "SYMVERS_FOUND=true" >> $GITHUB_ENV
+          cp 5.4/Module.symvers kernel/
+        else
+          echo "SYMVERS_FOUND=false" >> $GITHUB_ENV
+        fi
+
+    - name: Build Kernel (jika tidak ada symvers)
+      if: env.SYMVERS_FOUND == 'false'
+      run: |
+        cd kernel
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules
+
+    - name: Prepare Kernel
+      run: |
+        cd kernel
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+        
+    - name: Build Driver
+      run: |
+        mkdir -p output
+
+          make -C kernel M=$PWD/uwe5621ds-aml \
+            ARCH=$ARCH CROSS_COMPILE=$CROSS_COMPILE \
+            CONFIG_AML_WIFI_DEVICE_UWE5621=y \
+            CONFIG_WLAN_UWE5622=y \
+            CONFIG_TTY_OVERY_SDIO=y \
+            modules
+
+          find uwe5621ds-aml/ -name "*.ko" -exec cp {} output/ \;
+          cp kernel/Module.symvers output/ || true
+          tar -czvf output/all-drivers-arm64.tar.gz -C output .
+
+    - name: Upload ke GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: "driver-build-${{ github.run_number }}"
+        files: |
+          output/*.ko
+          output/Module.symvers
+          output/all-drivers-arm64.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+    
